@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # Implemented by Denis Alicic 2018.
-import sys,random,re
+import sys
+import re
+import argparse
 
 solution = {}
 
@@ -8,14 +10,13 @@ def initialize_solution(D):
     for clause in D:
         for literal in clause:
             if literal not in solution and -literal not in solution:
-                solution[+literal] = "T" 
+                solution[+literal] = "T"
 
 def replace_literal(D,literal,key):
     if literal in solution:
         solution[literal] = key
     else:
         solution[-literal] = "T" if key == "F" else "F"
-    # There is ***MAGIC***
     # Droping clauses which have "T" and droping literal "F"
     # So, there's no actually replacing. This is faster solution
     if key == "T":
@@ -33,7 +34,7 @@ def DPLL(D):
     for clause in D:
         if len(clause) == 0:
             return False
-    
+
     # Droping clauses which has some literal and its negation
     for clause in D:
         drop = False
@@ -42,50 +43,38 @@ def DPLL(D):
                 drop = True
         if drop == False:
             newD.append(clause)
-        
+
     # If something happened call recursion 
     if len(D) != len(newD):
-        #print("-----TAUTOLOGY------")
-        #print(newD)
         return DPLL(newD)
-    # Unit propagatioif call:
+    # Unit propagation call:
     for clause in D:
         if len(clause) == 1:
             if clause[0] > 0:
-                #print("----UNIT PROPAGATION-----")
                 D = replace_literal(D,clause[0],"T")
                 D = replace_literal(D,-clause[0],"F")
-                #print(D)
                 return DPLL(D)
             else:
-                #print("----UNIT PROPAGATION-----")
                 D = replace_literal(D,-clause[0],"F")
                 D = replace_literal(D,clause[0],"T")
-                #print(D)
                 return DPLL(D)
     # Pure literal
     for clause in D:
         for p in clause:
             if num_of_literal(D,-p) == 0:
-                #print("----PURE LITERAL-----")
                 D = replace_literal(D,p,"T")
-                #print(D)
                 return DPLL(D)
     # SPLIT
     literal = D[0][0]
-    #print("------SPLIT-----")
     # Must,because of copying list by reference
     newD = list(D)
     newD = replace_literal(newD,literal,"T")
     newD = replace_literal(newD,-literal,"F")
-    #print(newD)
     if DPLL(newD) == True:
         return True
     else:
-        #print("------SPLIT-----")
         D = replace_literal(D,literal,"F")
         D = replace_literal(D,-literal,"T")
-        #print(D)
         return DPLL(D)
 
 
@@ -107,14 +96,25 @@ def initialize_data(input_f):
         sys.exit(1)
     return data
 
+def print_evaluation(shuffled_solution):
+    evalution = [None] * len(shuffled_solution)
+    for literal in shuffled_solution:
+        evalution[abs(literal) - 1] = 1 if literal > 0 else 0
+    print("Evaluation: ")
+    print(evalution)
+
 def main():
 
-    input_f = "input.cnf"
-    if len(sys.argv) == 2:
-        input_f = sys.argv[1]
-    data = initialize_data(input_f)
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-i",
+        "--input_file",
+        help="Input .cnf file",
+        required=True
+        )
+    args = parser.parse_args()
+    data = initialize_data(args.input_file)
     initialize_solution(data)
-    #print(data)
 
     if DPLL(data):
         print("SAT")
@@ -124,11 +124,11 @@ def main():
                 solution_settled.append(literal)
             else:
                 solution_settled.append(-literal)
-                
-        print(solution_settled)
+
+        print_evaluation(solution_settled)
     else:
         print("UNSAT")
-    
+
 
 if __name__ == "__main__":
     main()
